@@ -1,0 +1,25 @@
+General notes for the development process:
+not really meant to make any sense to anyone but me at the moment
+
+q.select(Person, Country).where(
+    {name: "William"}, {name: "England"}
+)
+
+q.select(Person).where(
+    {name: "William"}
+)
+
+str(q) to fetch translation?
+
+could use inspect for lambda based query also
+
+this doesn't work since pass-by-value:
+q.select(Person.profession).where(
+    Person="William"
+)
+
+would have to be like
+Person.select(Person.profession).where(Person="william")
+
+should also allow string arguments like
+q.select("Person.profession") so that the above can be easily automated
