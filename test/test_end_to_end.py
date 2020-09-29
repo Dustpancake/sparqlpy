@@ -10,23 +10,28 @@ from sparqly.query import (
     SelectTypeMistmatch
 )
 
-class Example(Item):
+class Example1(Item):
+    ex_predicate = "predicate"
+    something_else = "PS:213989"
+    other = "QMP:313"
+class Example2(Item):
     ex_predicate = "predicate"
     something_else = "PS:213989"
     other = "QMP:313"
 
+def test_reset():
+    q = query()
+    q._reset = MagicMock()
+    q._select = MagicMock()
+
+    q.select(Example1)
+    q._reset.assert_called_with()
+
 def test_select_item():
     q = query()
 
-    q.select(Example)
-    assert isinstance(q._selections[0], Example)
-
-    # not yet implemented
-    #q.select(Example.other)
-    #assert q._selections == [Example.other]
-
-    #with pytest.raises(SelectTypeMistmatch) as e:
-    #    q.select(Example, Example.ex_predicate)
+    q.select(Example1)
+    assert isinstance(q._selections[0], Example1)
 
     with pytest.raises(InvalidQueryItem) as e:
         q.select(MagicMock)
@@ -34,7 +39,25 @@ def test_select_item():
 def test_make_query():
     q = query()
 
-    q.select(Example).where(ex_predicate="hello").all()
-    print(str(q))
+    q.select(Example1).where(ex_predicate="hello").all()
+    assert str(q) == (
+        "SELECT ?Example1 WHERE {\n\t?Example1 predicate hello .\n}"
+    )
 
-    #assert False
+
+    q.select(Example1).where(ex_predicate="hello", other="world").all()
+    assert str(q) == (
+        "SELECT ?Example1 WHERE {"
+        "\n\t?Example1 predicate hello ;"
+        "\n\tQMP:313 world .\n}"
+    )
+
+    q.select(Example1, Example2).where(
+        {"ex_predicate": "hello"}, {"other": "world"}
+    ).all()
+
+    assert str(q) == (
+        "SELECT ?Example1 ?Example2 WHERE {"
+        "\n\t?Example1 predicate hello ."
+        "\n\t?Example2 QMP:313 world .\n}"
+    )

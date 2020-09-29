@@ -9,7 +9,8 @@ from sparqly.query import (
     InvalidQuery,
     InvalidQueryItem,
     SelectWhereMistmatch,
-    InvalidPredicate
+    InvalidPredicate,
+    NoSuchPredicate
 )
 
 def test_constructor_args():
@@ -36,6 +37,11 @@ class MockItem():
 class MockItem2():
     _predicates = ["something"]
     something = "other"
+class MockItem3:
+    pred1 = "new_pred1"
+    pred2 = "new_pred2"
+    def __getitem__(self, i):
+        return self.__getattribute__(i)
 
 @pytest.fixture
 def mockitem():
@@ -45,6 +51,8 @@ class TestSelect:
 
     def test_arguments(self):
         q = query()
+        with pytest.raises(TypeError) as e:
+            q.select()
 
     def test_item_instatiation(self):
         q = query()
@@ -66,14 +74,20 @@ class TestSelect:
         q._select(m)
         assert q._selections == [m]
 
-        # technically not implemented yet
-        q._select(MockItem.example)
-
     def test_many(self):
         q = query()
-        q._select(MockItem.example, MockItem.other)
-        assert q._selections == [MockItem.example, MockItem.other]
+        m = MockItem()
+        m2 = MockItem2()
+        q._select(m, m2)
+        assert q._selections == [m, m2]
 
+    def test_non_item(self):
+        q = query()
+        with pytest.raises(NotImplementedError) as e:
+            q.select(MockItem.example)
+
+        with pytest.raises(InvalidQueryItem) as e:
+            q.select(str)
 
 class TestWhere:
 
@@ -193,44 +207,38 @@ class TestMakeQuery:
         )
         assert res == "MagicMock other test_example ;\n\texample something ."
 
-
     def test_assemble_query(self):
         q = query()
 
-        q._make_tripple = MagicMock(
-            return_value = "?MagicMock other test_example ;\n\texample something ."
+        q._fetch_predicate_names = MagicMock(
+            return_value = {"something_else": ["object1"], "test_example": ["object2"]}
         )
 
-        q._tripples = {"MagicMock" : {"other": ["test_example"], "example": ["something"]}}
+        q._make_tripple = MagicMock(
+            return_value = "?MagicMock something_else object1 ;\n\ttest_example object2 ."
+        )
+
+        q._tripples = {"MagicMock" : {"other": ["object1"], "example": ["object2"]}}
         q._assemble_query()
         q._make_tripple.assert_called_with(
             "?MagicMock",
-            {"other": ["test_example"], "example": ["something"]}
+            {"something_else": ["object1"], "test_example": ["object2"]}
         )
+        print(q._query)
         assert q._query == (
             "SELECT ?MagicMock WHERE {"
-            "\n\t?MagicMock other test_example ;"
-            "\n\texample something ."
+            "\n\t?MagicMock something_else object1 ;"
+            "\n\ttest_example object2 ."
             "\n}"
         )
 
-    def test_assemble_big_query(self):
+    def test_fetch_predicate_names(self):
         q = query()
-        q._tripples = {
-            "MagicMock" :
-            { "other": ["test_example"], "example": ["something"] },
-            "OtherMock" :
-            { "p1": ["o1"], "p2": ["o2"]}
-        }
+        m = MockItem3()
+        doubles = {"pred1": ["object1"], "pred2": ["object2"]}
 
-        # TODO: tests _make_tripple implicity cus I can't
-        # be bothered to mock the function right now
-        q._assemble_query()
-        assert q._query == (
-            "SELECT ?MagicMock ?OtherMock WHERE {"
-            "\n\t?MagicMock other test_example ;"
-            "\n\texample something ."
-            "\n\t?OtherMock p1 o1 ;"
-            "\n\tp2 o2 ."
-            "\n}"
-        )
+        res = q._fetch_predicate_names(m, doubles)
+        assert res == {"new_pred1": ["object1"], "new_pred2": ["object2"]}
+
+        with pytest.raises(NoSuchPredicate) as e:
+            res = q._fetch_predicate_names(m, {"bad_predicate": "object1"})

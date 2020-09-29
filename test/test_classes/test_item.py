@@ -16,3 +16,7 @@ def test_feature_extraction():
 def test_repr():
     ex = Example()
     assert repr(ex) == "Example"
+
+def test_predicate_retrieval():
+    ex = Example()
+    assert ex["ex_predicate"] == "predicate"

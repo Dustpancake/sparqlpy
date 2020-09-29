@@ -21,3 +21,6 @@ class Item(abc.ABC):
 
     def __str__(self):
         return self.__repr__()
+
+    def __getitem__(self, name):
+        return self.__getattribute__(name)
