@@ -24,3 +24,7 @@ class Item(abc.ABC):
 
     def __getitem__(self, name):
         return self.__getattribute__(name)
+
+    @staticmethod
+    def _inheritors():
+        return Item.__subclasses__

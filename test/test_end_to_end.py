@@ -24,6 +24,7 @@ def test_reset():
     q._reset = MagicMock()
     q._select = MagicMock()
 
+    # implicitly asserts that Example1 is of type Item
     q.select(Example1)
     q._reset.assert_called_with()
 
@@ -31,7 +32,7 @@ def test_select_item():
     q = query()
 
     q.select(Example1)
-    assert isinstance(q._selections[0], Example1)
+    assert isinstance(q._selections["subject"][0], Example1)
 
     with pytest.raises(InvalidQueryItem) as e:
         q.select(MagicMock)
@@ -61,3 +62,9 @@ def test_make_query():
         "\n\t?Example1 predicate hello ."
         "\n\t?Example2 QMP:313 world .\n}"
     )
+
+@pytest.mark.hare
+def test_query_object():
+    q = query()
+
+    #q.select(Example1.ex_predicate).where(Example1="something")

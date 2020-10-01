@@ -23,3 +23,22 @@ Person.select(Person.profession).where(Person="william")
 
 should also allow string arguments like
 q.select("Person.profession") so that the above can be easily automated
+
+
+----
+
+class Person:
+  movement = ""
+  placeofbirth = ""
+  coordinates = Linked("", "placeofbirth")
+
+q.select(Person, Person.coordinates).where(
+  Person.movement="pre raphaelite"
+)
+
+->
+SELECT ?person ?coordinates WHERE {
+  ?person movement PreRaph
+  ?person placeofbirth ?placeofbirth
+  ?placeofbirth coordinates ?coordinates
+}

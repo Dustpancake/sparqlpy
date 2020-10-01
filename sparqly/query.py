@@ -45,7 +45,10 @@ class Query:
             self._reset()
             for i in args:
                 if not inspect.isclass(i):
-                    raise NotImplementedError
+                    if type(i) is not str:
+                        raise NotImplementedError
+                    else:
+                        continue
                 if not issubclass(i, Item):
                     raise InvalidQueryItem
 
@@ -55,28 +58,53 @@ class Query:
             raise TypeError
 
     def where(self, *args, **kwargs):
-        if len(args) > 0:
+        subjects = len(self._selections["subject"])
+        objects = len(self._selections["object"])
 
-            if len(args) != len(self._selections):
-                raise SelectWhereMistmatch
+        if subjects and objects:
+            raise NotImplementedError
 
-            for item, kw in zip(self._selections, args):
-                self._where_kwargs(item, **kw)
+        elif subjects:
+            self._where_handler(
+                self._selections["subject"],
+                *args,
+                **kwargs
+            )
 
-        elif kwargs and len(self._selections) == 1:
-
-            self._where_kwargs(
-                self._selections[0],
+        elif objects:
+            self._where_handler(
+                self._selections["object"],
+                *args,
                 **kwargs
             )
 
         else:
             raise SelectWhereMistmatch
+
         return self
 
     def all(self):
         self._assemble_query()
         return self
+
+    def _where_handler(self, selections, *args, **kwargs):
+        if len(args) > 0:
+
+            if not all(type(i) == dict for i in args):
+                raise TypeError
+
+            for item, kw in zip(selections, args):
+                self._where_kwargs(item, **kw)
+
+        elif kwargs and len(selections) == 1:
+
+            self._where_kwargs(
+                selections[0],
+                **kwargs
+            )
+
+        else:
+            raise SelectWhereMistmatch
 
     def _where_kwargs(self, item, **kwargs):
         subj = self._tripples[item]
@@ -91,15 +119,15 @@ class Query:
 
     def _select(self, *args):
         for i in args:
-            # implement like this for testing; TODO: neaten
-            if type(i) is abc.ABCMeta or type(i) is type:
+            type_of_arg = type(i)
+            if type_of_arg is abc.ABCMeta or type_of_arg is type:
                 i = i()
-                if not isinstance(i, Item):
-                    raise InvalidQueryItem
+            if isinstance(i, Item):
+                self._selections["subject"].append(i)
+            else:
+                self._selections["object"].append(i)
 
-            self._selections.append(i)
-
-    def _canonicalise_selection(self):
+    def _validate_arguments(self):
         ...
 
     def _assemble_query(self):
@@ -141,7 +169,10 @@ class Query:
 
     def _reset(self):
         self._query         = ""
-        self._selections    = []
+        self._selections    = {
+            "subject": [],
+            "object": []
+        }
         self._tripples      = defaultdict(
             lambda: defaultdict(list)
         )

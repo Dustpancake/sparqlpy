@@ -14,9 +14,10 @@ from sparqly.query import (
 )
 
 def test_constructor_args():
+    from collections import defaultdict
     q = query()
     assert q._query == ""
-    assert q._selections == []
+    assert q._selections == { "subject": [], "object": [] }
 
 def test_get_attr():
     q = query()
@@ -51,13 +52,22 @@ class TestSelect:
 
     def test_arguments(self):
         q = query()
+
+        # valid options
+        q.select(MockItem.example)
+        q.select("Predicate from string")
+
+        #invalid:
         with pytest.raises(TypeError) as e:
             q.select()
 
+        with pytest.raises(InvalidQueryItem) as e:
+            q.select(str)
+
     def test_item_instatiation(self):
         q = query()
-        with pytest.raises(InvalidQueryItem) as e:
-            q._select(MockItem)
+        q._select(MockItem)
+        assert isinstance(q._selections["object"][0], MockItem)
 
     def test_valid_instances(self):
         q = query()
@@ -72,22 +82,14 @@ class TestSelect:
         # class
         m = MockItem()
         q._select(m)
-        assert q._selections == [m]
+        assert q._selections["object"] == [m]
 
     def test_many(self):
         q = query()
         m = MockItem()
         m2 = MockItem2()
         q._select(m, m2)
-        assert q._selections == [m, m2]
-
-    def test_non_item(self):
-        q = query()
-        with pytest.raises(NotImplementedError) as e:
-            q.select(MockItem.example)
-
-        with pytest.raises(InvalidQueryItem) as e:
-            q.select(str)
+        assert q._selections["object"] == [m, m2]
 
 class TestWhere:
 
@@ -123,11 +125,24 @@ class TestWhere:
             {"something": ["o4"]}
         }
 
+    def test_both_objects_and_subjects(self):
+        q = query()
+
+        # ensure select is called first
+        with pytest.raises(SelectWhereMistmatch) as e:
+            q.where()
+
+        with pytest.raises(NotImplementedError) as e:
+            q._selections = {"subject": [1], "object": [1]}
+            q.where()
+
+class TestWhereSubject():
+
     def test_single_where(self):
         q = query()
         q._where_kwargs = MagicMock()
         m = MockItem()
-        q._selections = [m]
+        q._selections = {"subject": [m], "object": []}
 
         # mismatch
         with pytest.raises(SelectWhereMistmatch) as e:
@@ -158,18 +173,7 @@ class TestWhere:
     def test_many_where(self):
         q = query()
         q._where_kwargs = MagicMock()
-        q._selections = [MockItem.example, MockItem.other]
-
-        with pytest.raises(SelectWhereMistmatch) as e:
-            q.where(
-                {"example": "test_example"},
-                {"example2": "test_example2"},
-                {"example3": "test_example3"}
-            )
-        with pytest.raises(SelectWhereMistmatch) as e:
-            q.where(
-                {"example2":"test_example2"}
-            )
+        q._selections = {"subject": [MockItem.example, MockItem.other], "object": []}
 
         q.where(
             {"example": "test_example"},
@@ -190,7 +194,7 @@ class TestWhere:
 
     def test_bad_predicates(self):
         q = query()
-        q._selections = [MockItem]
+        q._selections = {"subject": [MockItem], "object": []}
         with pytest.raises(InvalidPredicate) as e:
             q._where_kwargs(MockItem, aabbcc="123")
 

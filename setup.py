@@ -1,19 +1,24 @@
 from setuptools import setup
 
+with open("README.md", "r") as f:
+	readme = f.read()
+
 setup(
-	name='sparqle',
-	version='0.1.0',
-	description='Brief description of your project',
-	long_description='Normally read in from a text or md file, such as README.md',
+	name='sparqly',
+	version='0.1.1',
+	description='SPARQL semantic translator and ORM for Python.',
+	long_description=readme,
 	long_description_content_type='text/markdown',
-	author='Fergus Baker',
-	url='http://project.url',
+	author='Dustpancake',
+	author_email='fergusb.temp@gmail.com',
+	url='https://github.com/Dustpancake/sparqly',
 	packages=[
-		'sparqle'
+		'sparqly'
 	],
 	classifiers=[
-		"Programming Language :: Python :: 3",
+		"Programming Language :: Python :: 3.7",
 		"License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
 	],
+	python_requires=">=3.7",
 	zip_safe=False
 )
